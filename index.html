@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Japan Quest — Planificateur de voyage au Japon interactif">
+  <title>Japan Quest 🇯🇵 — Planificateur de voyage</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗾</text></svg>">
+</head>
+<body>
+  <div id="app">
+    <!-- SIDEBAR (menu vertical épuré) -->
+    <aside id="sidebar">
+      <header class="sidebar-header">
+        <h1 class="sidebar-title">日本の冒険</h1>
+        <p class="sidebar-subtitle">JAPAN QUEST <span id="mode-indicator" class="mode-badge"></span></p>
+        <div class="stats-row">
+          <div class="stat-item total"><span class="stat-value" id="stat-total">0</span><span class="stat-label">LIEUX</span></div>
+          <div class="stat-item to-visit"><span class="stat-value" id="stat-to-visit">0</span><span class="stat-label">À VISITER</span></div>
+          <div class="stat-item visited"><span class="stat-value" id="stat-visited">0</span><span class="stat-label">VISITÉS</span></div>
+        </div>
+        <div class="progress-container">
+          <div class="progress-bar" id="progress-bar" style="width: 0%"></div>
+          <span class="progress-text" id="progress-text">0%</span>
+        </div>
+      </header>
+
+      <nav class="sidebar-menu">
+        <button class="menu-btn" data-panel="center-search">
+          <span class="menu-btn-label">CHERCHER</span>
+          <span class="menu-btn-icon">🔍</span>
+        </button>
+        <button class="menu-btn" data-panel="center-route">
+          <span class="menu-btn-label">ITINÉRAIRE</span>
+          <span class="menu-btn-icon">🗺️</span>
+        </button>
+        <button class="menu-btn" data-panel="center-suggestions">
+          <span class="menu-btn-label">IDÉES</span>
+          <span class="menu-btn-icon">💡</span>
+        </button>
+        <button class="menu-btn" data-panel="center-planning">
+          <span class="menu-btn-label">PLANNING</span>
+          <span class="menu-btn-icon">📅</span>
+        </button>
+      </nav>
+    </aside>
+
+    <!-- MAP -->
+    <main id="map-container">
+      <button id="sidebar-toggle" title="Toggle sidebar">☰</button>
+      <div id="map"></div>
+    </main>
+  </div>
+
+  <!-- === BANDEAU BAS ITINÉRAIRE === -->
+  <div class="route-bar" id="route-bar">
+    <div class="route-bar-inner">
+      <div class="route-bar-stat">
+        <span class="route-bar-label">📏 DISTANCE</span>
+        <span class="route-bar-value" id="rb-distance">—</span>
+      </div>
+      <div class="route-bar-separator"></div>
+      <div class="route-bar-stat">
+        <span class="route-bar-label">🚗 VOITURE</span>
+        <span class="route-bar-value" id="rb-car">—</span>
+      </div>
+      <div class="route-bar-separator"></div>
+      <div class="route-bar-stat">
+        <span class="route-bar-label">🚃 TRANSPORTS</span>
+        <span class="route-bar-value" id="rb-transit">—</span>
+      </div>
+      <div class="route-bar-separator"></div>
+      <div class="route-bar-stat">
+        <span class="route-bar-label">🚶 À PIED</span>
+        <span class="route-bar-value" id="rb-walk">—</span>
+      </div>
+      <div class="route-bar-separator"></div>
+      <div class="route-bar-stat">
+        <span class="route-bar-label">📍 ÉTAPES</span>
+        <span class="route-bar-value" id="rb-steps">—</span>
+      </div>
+      <button class="route-bar-close" id="route-bar-close">✕ FERMER</button>
+    </div>
+  </div>
+
+  <!-- === PANNEAU CENTRAL : CHERCHER === -->
+  <div class="center-overlay" id="center-search">
+    <div class="center-panel center-panel-wide">
+      <button class="detail-close center-close" data-close="center-search">✕</button>
+      <div class="center-panel-header">
+        <h2 class="center-panel-title">🔍 Chercher un lieu</h2>
+
+      </div>
+      <div class="center-panel-body">
+        <div class="search-autocomplete-inner">
+          <input type="text" id="place-search" class="search-input search-main" placeholder="Tapez un lieu au Japon...">
+          <div class="search-results" id="search-results"></div>
+        </div>
+        <p class="search-hint">Cliquez sur un résultat pour l'ajouter à votre carte.<br>Clic droit sur la carte pour ajouter manuellement.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- === PANNEAU CENTRAL : ITINÉRAIRE === -->
+  <div class="center-overlay" id="center-route">
+    <div class="center-panel center-panel-wide">
+      <button class="detail-close center-close" data-close="center-route">✕</button>
+      <div class="center-panel-header">
+        <h2 class="center-panel-title">🗺️ Planifier un itinéraire</h2>
+      </div>
+      <div class="center-panel-body">
+
+        <!-- Étapes sélectionnées -->
+        <div class="center-section-header">
+          <span class="center-section-title">✅ Étapes sélectionnées</span>
+        </div>
+        <div class="waypoints-list" id="waypoints-list">
+          <div class="waypoints-empty"><p>Cochez des lieux ci-dessous</p></div>
+        </div>
+        <div class="route-buttons">
+          <button class="pixel-btn pixel-btn-orange pixel-btn-small" id="calculate-route" disabled>▶ CALCULER L'ITINÉRAIRE</button>
+          <button class="pixel-btn pixel-btn-dark pixel-btn-small" id="clear-route" style="display:none">✕ EFFACER</button>
+        </div>
+        <div id="route-info" style="display:none"></div>
+
+        <div class="center-divider"></div>
+
+        <!-- Liste des lieux à cocher -->
+        <div class="center-section-header">
+          <span class="center-section-title">📍 Mes lieux</span>
+          <div class="filter-tabs">
+            <button class="filter-btn active" data-filter="all">TOUS</button>
+            <button class="filter-btn" data-filter="to-visit">⭐</button>
+            <button class="filter-btn" data-filter="visited">✅</button>
+          </div>
+        </div>
+        <input type="text" id="poi-filter" class="search-input" placeholder="Filtrer mes lieux...">
+        <div class="poi-list-container" id="poi-list">
+          <div class="empty-state"><div class="empty-icon">🏯</div><p>Aucun lieu pour le moment</p><p class="empty-hint">Ajoutez des lieux via 🔍 Chercher</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- === PANNEAU CENTRAL : PLANNING === -->
+  <div class="center-overlay" id="center-planning">
+    <div class="center-panel planning-panel">
+      <button class="detail-close center-close" data-close="center-planning">✕</button>
+      <div class="center-panel-header planning-header-row">
+        <h2 class="center-panel-title">📅 Planning de la semaine</h2>
+        <button class="pixel-btn pixel-btn-dark pixel-btn-tiny" onclick="PlanningManager.clearAll()">🗑️ VIDER</button>
+      </div>
+      <div class="center-panel-body" id="planning-body">
+        <!-- Rendu par PlanningManager.render() -->
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL AJOUT/EDITION (split gauche/droite) -->
+  <div class="modal-overlay" id="poi-modal-overlay">
+    <div class="modal-split pixel-border">
+
+      <!-- Bouton fermer -->
+      <button class="detail-close" id="modal-close-x">✕</button>
+
+      <!-- GAUCHE : formulaire -->
+      <div class="modal-split-left">
+        <h2 class="modal-title" id="modal-title">✦ Nouveau lieu</h2>
+
+        <form id="poi-form">
+          <input type="hidden" id="poi-lat">
+          <input type="hidden" id="poi-lng">
+          <input type="hidden" id="poi-photo" value="">
+
+          <div class="form-group">
+            <label class="form-label" for="poi-name">NOM DU LIEU</label>
+            <input type="text" id="poi-name" class="form-input" placeholder="Ex: Tour de Tokyo" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="poi-category">CATÉGORIE</label>
+            <select id="poi-category" class="form-select">
+              <option value="temple">⛩️ Temple / Sanctuaire</option>
+              <option value="restaurant">🍜 Restaurant</option>
+              <option value="nature">🌸 Nature</option>
+              <option value="shopping">🛍️ Shopping</option>
+              <option value="culture">🎌 Culture</option>
+              <option value="hotel">🏨 Hébergement</option>
+              <option value="other">📍 Autre</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="poi-notes">NOTES</label>
+            <textarea id="poi-notes" class="form-textarea" placeholder="Horaires, prix, conseils..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">STATUT</label>
+            <div class="status-options">
+              <div class="status-option">
+                <input type="radio" name="poi-status" value="to-visit" id="status-to-visit" checked>
+                <label for="status-to-visit">⭐ À VISITER</label>
+              </div>
+              <div class="status-option">
+                <input type="radio" name="poi-status" value="visited" id="status-visited">
+                <label for="status-visited">✅ VISITÉ</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button type="submit" class="pixel-btn pixel-btn-green">💾 SAUVEGARDER</button>
+            <button type="button" class="pixel-btn pixel-btn-dark" id="modal-cancel">ANNULER</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- DROITE : photo -->
+      <div class="modal-split-right">
+        <div class="modal-photo-header">
+          <span class="form-label">PHOTO</span>
+          <button type="button" class="pixel-btn pixel-btn-tiny pixel-btn-blue" id="fetch-photo-btn">📷 Chercher</button>
+        </div>
+        <div class="modal-photo-area" id="photo-preview">
+          <img id="photo-preview-img" src="" alt="">
+          <div class="photo-placeholder">
+            <span class="photo-msg-default">📷<br>La photo apparaîtra<br>automatiquement</span>
+            <span class="photo-msg-loading">⏳ Recherche...</span>
+            <span class="photo-msg-none">Pas de photo trouvée</span>
+          </div>
+        </div>
+        <p class="modal-photo-hint">La photo est cherchée automatiquement.<br>Cliquez sur "Chercher" pour relancer.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- DETAIL PANEL (info gauche + photo droite) -->
+
+  <div class="detail-overlay" id="detail-overlay">
+    <div class="detail-panel">
+
+      <!-- Bouton fermer -->
+      <button class="detail-close" id="detail-close">✕</button>
+
+      <!-- GAUCHE : infos -->
+      <div class="detail-left">
+        <div class="detail-top-bar">
+          <span class="detail-emoji" id="detail-emoji">📍</span>
+          <div class="detail-title-block">
+            <h2 class="detail-name" id="detail-name"></h2>
+            <span class="detail-category-label" id="detail-category-label"></span>
+          </div>
+          <span class="detail-status-badge" id="detail-status-badge"></span>
+        </div>
+
+        <div class="detail-divider"></div>
+
+        <!-- Notes -->
+        <div class="detail-section" id="detail-notes-section">
+          <p class="detail-section-title">📝 Notes</p>
+          <p class="detail-notes-text" id="detail-notes-text"></p>
+        </div>
+
+        <!-- Coordonnées -->
+        <div class="detail-section">
+          <p class="detail-section-title">📌 Coordonnées</p>
+          <p class="detail-coords" id="detail-coords"></p>
+        </div>
+
+        <!-- Date -->
+        <div class="detail-section">
+          <p class="detail-section-title">🗓️ Ajouté le</p>
+          <p class="detail-date" id="detail-date"></p>
+        </div>
+
+        <div class="detail-divider"></div>
+
+        <!-- Actions -->
+        <div class="detail-actions">
+          <button class="pixel-btn pixel-btn-green" id="detail-toggle-btn">✅ Marquer visité</button>
+          <button class="pixel-btn pixel-btn-blue" id="detail-edit-btn">✎ Modifier</button>
+          <button class="pixel-btn pixel-btn-red" id="detail-delete-btn">✕ Supprimer</button>
+        </div>
+      </div>
+
+      <!-- DROITE : photo -->
+      <div class="detail-right" id="detail-right">
+        <img class="detail-photo-img" id="detail-photo-img" src="" alt="">
+        <div class="detail-no-photo" id="detail-no-photo">
+          <span class="detail-no-photo-icon">📷</span>
+          <p>Pas de photo disponible</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- LIGHTBOX -->
+  <div class="lightbox-overlay" id="lightbox-overlay">
+    <button class="lightbox-close" id="lightbox-close">✕</button>
+    <img class="lightbox-img" id="lightbox-img" src="" alt="">
+  </div>
+
+  <!-- SUGGESTIONS PANEL -->
+  <div class="suggestions-overlay" id="suggestions-overlay">
+    <div class="suggestions-panel">
+      <div class="suggestions-header">
+        <h2 class="suggestions-title">💡 Suggestions</h2>
+        <p class="suggestions-subtitle">Des idées pour ton voyage au Japon</p>
+        <button class="detail-close" id="suggestions-close">✕</button>
+      </div>
+      <div class="suggestions-legend">
+        <span>🟢 Facile d'accès</span>
+        <span>🟡 Moyen</span>
+        <span>🔴 Aventurier</span>
+      </div>
+      <div class="suggestions-header-actions">
+        <!-- Le bouton 🗺️ AFFICHER SUR LA CARTE est injecté par JS -->
+      </div>
+      <div class="suggestions-list" id="suggestions-list"></div>
+    </div>
+  </div>
+
+  <div id="notifications"></div>
+
+  <!-- Scripts -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/poi.js"></script>
+  <script src="js/router.js"></script>
+  <script src="js/search.js"></script>
+  <script src="js/suggestions.js"></script>
+  <script src="js/planning.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
