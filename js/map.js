@@ -22,10 +22,43 @@ const MapManager = {
     this.map = L.map('map', { center: [36.5, 138.0], zoom: 6, zoomControl: false, attributionControl: true });
     L.control.zoom({ position: 'bottomright' }).addTo(this.map);
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    // Couches de fond de carte — toutes gratuites, SANS clé API
+
+    // Couche française : noms en français là où les données OSM le permettent
+    // (serveur rendu par OpenStreetMap France — benevolat, pas de clé API)
+    const osmFrLayer = L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributeurs, rendu par <a href="https://www.openstreetmap.fr">OSM France</a>',
+      subdomains: 'abc',
+      maxZoom: 20
+    });
+
+    // OSM standard (noms en japonais) — gardé comme alternative
+    const osmLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19
+    });
+
+    const cartoLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
-      subdomains: 'abcd', maxZoom: 19
-    }).addTo(this.map);
+      subdomains: 'abcd',
+      maxZoom: 20
+    });
+
+    const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: '&copy; <a href="https://www.esri.com/">Esri</a>, Maxar, Earthstar Geographics',
+      maxZoom: 19
+    });
+
+    // Couche par défaut : OSM France (noms en français)
+    osmFrLayer.addTo(this.map);
+
+    // Sélecteur de fond de carte
+    L.control.layers({
+      '🇫🇷 Français (OSM France)': osmFrLayer,
+      '🗺️ Standard (japonais)': osmLayer,
+      '🎨 Carto Light': cartoLayer,
+      '🛰️ Satellite (Esri)': satelliteLayer
+    }, {}, { position: 'topright', collapsed: true }).addTo(this.map);
 
     this.map.on('contextmenu', (e) => this.showContextMenu(e));
     this.map.on('click', () => this.hideContextMenu());
